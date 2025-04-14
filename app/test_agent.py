@@ -87,7 +87,8 @@ def test_agent(query: str):
     try:
         response = agent_executor.invoke({
             "input": query,
-            "chat_history": []
+            "chat_history": [],
+            "agent_scratchpad": []
         })
         return response["output"]
     except Exception as e:
