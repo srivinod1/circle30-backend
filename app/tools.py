@@ -2,26 +2,28 @@ import os
 import geopandas as gpd
 from typing import List, Union
 from langchain.tools import tool
+from .storage import storage
 
-# Get the absolute path to the GeoJSON file
-ZIP_DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "outputs", "zip_ev_score_enriched.geojson")
+# Global cache (so tools don't reload on every call)
+ZIP_DATA_PATH = "zip_ev_score.geojson"  # Updated file path
 _gdf = None
 
 def load_data():
     global _gdf
     if _gdf is None:
+        print(f"Loading data from S3: {ZIP_DATA_PATH}")
+        local_path = storage.get_file(ZIP_DATA_PATH)
+        if not local_path:
+            print(f"ERROR: Could not load data file from S3")
+            return None
         try:
-            print(f"Attempting to load data from: {ZIP_DATA_PATH}")
-            if not os.path.exists(ZIP_DATA_PATH):
-                raise FileNotFoundError(f"GeoJSON file not found at: {ZIP_DATA_PATH}")
-            print("File exists, loading with GeoPandas...")
-            _gdf = gpd.read_file(ZIP_DATA_PATH)
-            print(f"Successfully loaded data. Shape: {_gdf.shape}")
-            print(f"Columns: {_gdf.columns.tolist()}")
-            print(f"Sample cities: {_gdf['city'].dropna().unique()[:5]}")
+            _gdf = gpd.read_file(local_path)
+            print(f"Data loaded successfully. Shape: {_gdf.shape}")
+            print(f"Available columns: {_gdf.columns.tolist()}")
+            print(f"Available cities: {sorted(_gdf['city'].dropna().unique().tolist())[:5]} ...")
         except Exception as e:
             print(f"Error loading data: {str(e)}")
-            raise
+            return None
     return _gdf
 
 # 1️⃣ List all unique cities
