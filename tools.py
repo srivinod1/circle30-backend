@@ -2,20 +2,22 @@ import geopandas as gpd
 from typing import List, Union
 from langchain.tools import tool
 import os
+from .storage import storage
 
 # Global cache (so tools don't reload on every call)
-ZIP_DATA_PATH = "outputs/zip_ev_score_enriched.geojson"
+ZIP_DATA_PATH = "zip_ev_score.geojson"
 _gdf = None
 
 def load_data():
     global _gdf
     if _gdf is None:
-        print(f"Loading data from: {os.path.abspath(ZIP_DATA_PATH)}")
-        if not os.path.exists(ZIP_DATA_PATH):
-            print(f"ERROR: Data file not found at {ZIP_DATA_PATH}")
+        print(f"Loading data from S3: {ZIP_DATA_PATH}")
+        local_path = storage.get_file(ZIP_DATA_PATH)
+        if not local_path:
+            print(f"ERROR: Could not load data file from S3")
             return None
         try:
-            _gdf = gpd.read_file(ZIP_DATA_PATH)
+            _gdf = gpd.read_file(local_path)
             print(f"Data loaded successfully. Shape: {_gdf.shape}")
             print(f"Available columns: {_gdf.columns.tolist()}")
             print(f"Available cities: {sorted(_gdf['city'].dropna().unique().tolist())[:5]} ...")
