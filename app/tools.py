@@ -3,6 +3,9 @@ import geopandas as gpd
 from typing import List, Union
 from langchain.tools import tool
 from .storage import storage
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Global cache (so tools don't reload on every call)
 ZIP_DATA_PATH = "zip_ev_score.geojson"  # Updated file path
@@ -11,18 +14,19 @@ _gdf = None
 def load_data():
     global _gdf
     if _gdf is None:
-        print(f"Loading data from S3: {ZIP_DATA_PATH}")
+        logger.info(f"Loading data from S3: {ZIP_DATA_PATH}")
         local_path = storage.get_file(ZIP_DATA_PATH)
         if not local_path:
-            print(f"ERROR: Could not load data file from S3")
+            logger.error(f"ERROR: Could not load data file from S3")
             return None
         try:
+            logger.info("Reading GeoJSON file with GeoPandas...")
             _gdf = gpd.read_file(local_path)
-            print(f"Data loaded successfully. Shape: {_gdf.shape}")
-            print(f"Available columns: {_gdf.columns.tolist()}")
-            print(f"Available cities: {sorted(_gdf['city'].dropna().unique().tolist())[:5]} ...")
+            logger.info(f"Data loaded successfully. Shape: {_gdf.shape}")
+            logger.info(f"Available columns: {_gdf.columns.tolist()}")
+            logger.info(f"Available cities: {sorted(_gdf['city'].dropna().unique().tolist())[:5]} ...")
         except Exception as e:
-            print(f"Error loading data: {str(e)}")
+            logger.error(f"Error loading data: {str(e)}")
             return None
     return _gdf
 
@@ -37,46 +41,52 @@ def list_cities() -> List[str]:
         return []
 
 # 2️⃣ Query underserved ZIPs in a city
-def query_zip_scores(city: str, top_n: int = 5) -> str:
+@tool
+def query_zip_scores(city: str) -> str:
     """
     Return ZIP codes for a given city with population > 10,000, sorted by EV count per capita (lowest to highest).
+    Args:
+        city: The name of the city to query
     """
     try:
-        print(f"Querying ZIP scores for city: {city}")
+        logger.info(f"Querying ZIP scores for city: {city}")
         gdf = load_data()
+        if gdf is None:
+            logger.error("Failed to load data")
+            return "ERROR: Could not load data file"
         
         # Normalize city names (case insensitive matching)
         city = city.strip().lower()
-        print(f"Normalized city name: {city}")
+        logger.info(f"Normalized city name: {city}")
         
         # Filter the dataset for the city
         df = gdf[gdf["city"].str.lower() == city]
-        print(f"Found {len(df)} ZIP codes for {city}")
+        logger.info(f"Found {len(df)} ZIP codes for {city}")
         
         if df.empty:
-            print(f"No ZIPs found for city: {city}")
+            logger.warning(f"No ZIPs found for city: {city}")
             return f"No ZIPs found for city: {city}"
 
         # Filter out ZIP codes with population ≤ 10,000
         df = df[df["population"] > 10000]
-        print(f"After population filter: {len(df)} ZIP codes")
+        logger.info(f"Found {len(df)} ZIP codes with population > 10,000")
         
         if df.empty:
-            print(f"No ZIPs found for {city} with population > 10,000")
+            logger.warning(f"No ZIPs found for city: {city} with population > 10,000")
             return f"No ZIPs found for city: {city} with population > 10,000"
 
         # Calculate EV count per capita
         df["evs_per_capita"] = df["ev_poi_count"] / (df["population"] + 1)
         
-        # Sort by EV count per capita (lowest to highest) and get top_n rows
-        top = df.sort_values("evs_per_capita", ascending=True).head(top_n)
-        print(f"Top {top_n} underserved ZIP codes:")
-        print(top[["ZIP", "population", "ev_poi_count", "evs_per_capita"]])
+        # Sort by EV count per capita (lowest to highest) and get top 5 rows
+        top = df.sort_values("evs_per_capita", ascending=True).head(5)
+        logger.info(f"Top underserved ZIP codes:")
+        logger.info(top[["ZIP", "population", "ev_poi_count", "evs_per_capita"]].to_string())
         
         return top[["ZIP", "population", "ev_poi_count", "evs_per_capita"]].to_markdown(index=False)
     except Exception as e:
-        print(f"Error in query_zip_scores: {str(e)}")
-        return f"Error processing request: {str(e)}"
+        logger.error(f"Error in query_zip_scores: {str(e)}")
+        return f"Error: {str(e)}"
 
 # 3️⃣ Get ZIP boundaries for a city (GeoJSON string)
 def get_geojson_for_city(city: str) -> str:
