@@ -18,8 +18,8 @@ def create_app():
         app = Flask(__name__)
         
         # Register blueprints or routes here if needed
-        from .api import app as api_blueprint
-        app.register_blueprint(api_blueprint)
+        from .api import app as api_bp
+        app.register_blueprint(api_bp, url_prefix='/api')
         
         logger.info("Application created successfully")
         return app
