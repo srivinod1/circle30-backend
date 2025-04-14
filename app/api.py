@@ -1,30 +1,20 @@
-from flask import Blueprint, jsonify, request, send_from_directory
-from app import test_agent
-import logging
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from .test_agent import agent_executor
 
-logger = logging.getLogger(__name__)
+app = FastAPI()
 
-# Create a blueprint for the API routes
-app = Blueprint('api', __name__)
+class Query(BaseModel):
+    query: str
 
-@app.route('/chat', methods=['POST'])
-def chat():
-    """
-    Endpoint for chat interactions with the agent.
-    Expects a JSON payload with a 'message' field.
-    """
+@app.post("/query")
+async def process_query(query: Query):
     try:
-        data = request.get_json()
-        if not data or 'message' not in data:
-            return jsonify({"error": "Missing 'message' in request body"}), 400
-            
-        logger.info(f"Received chat message: {data['message']}")
-        response = test_agent(data['message'])
-        logger.info("Agent response generated successfully")
-        return jsonify({"response": response}), 200
+        result = agent_executor.invoke({"input": query.query})
+        return {"response": result["output"]}
     except Exception as e:
-        logger.error(f"Error in /chat: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}

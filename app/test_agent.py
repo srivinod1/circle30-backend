@@ -26,16 +26,28 @@ class GetZipDetailsInput(BaseModel):
 # Define the tools
 tools = [
     StructuredTool.from_function(
-        func=query_zip_scores,
+        func=lambda city: query_zip_scores(city),
         name="query_zip_scores",
         description="Get ZIP codes for a given city.",
-        args_schema=QueryZipScoresInput
+        args_schema={
+            "type": "object",
+            "properties": {
+                "city": {"type": "string", "description": "The name of the city"}
+            },
+            "required": ["city"]
+        }
     ),
     StructuredTool.from_function(
-        func=get_zip_details,
+        func=lambda zipcode: get_zip_details(zipcode),
         name="get_zip_details",
         description="Get detailed statistics for a specific ZIP code.",
-        args_schema=GetZipDetailsInput
+        args_schema={
+            "type": "object",
+            "properties": {
+                "zipcode": {"type": "string", "description": "The ZIP code to get details for"}
+            },
+            "required": ["zipcode"]
+        }
     )
 ]
 
