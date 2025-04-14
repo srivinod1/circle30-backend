@@ -1,0 +1,7 @@
+flask==3.0.2
+langchain==0.1.9
+langchain-openai==0.0.5
+geopandas==1.0.1
+fiona==1.10.1
+gunicorn==21.2.0
+python-dotenv==1.0.1
