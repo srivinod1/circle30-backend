@@ -3,8 +3,7 @@ from langchain_openai import ChatOpenAI
 from langchain.agents import AgentExecutor, create_openai_functions_agent
 from langchain.tools import StructuredTool
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from pydantic.v1 import BaseModel, Field
-from .tools import query_zip_scores_tool, get_zip_details_tool
+from .tools import query_zip_scores, get_zip_details
 
 # Load the OpenAI API key from the environment variable
 openai_api_key = os.getenv('OPENAI_API_KEY')
@@ -16,26 +15,31 @@ llm = ChatOpenAI(
     api_key=openai_api_key
 )
 
-# Define Pydantic v1 models for tool schemas
-class QueryZipScoresInput(BaseModel):
-    city: str = Field(description="The name of the city")
-
-class GetZipDetailsInput(BaseModel):
-    zipcode: str = Field(description="The ZIP code to get details for")
-
 # Define the tools
 tools = [
     StructuredTool.from_function(
-        func=lambda city: query_zip_scores_tool.invoke({"city": city}),
+        func=query_zip_scores,
         name="query_zip_scores",
         description="Get ZIP codes for a given city.",
-        args_schema=QueryZipScoresInput
+        args_schema={
+            "type": "object",
+            "properties": {
+                "city": {"type": "string", "description": "The name of the city"}
+            },
+            "required": ["city"]
+        }
     ),
     StructuredTool.from_function(
-        func=lambda zipcode: get_zip_details_tool.invoke({"zipcode": zipcode}),
+        func=get_zip_details,
         name="get_zip_details",
         description="Get detailed statistics for a specific ZIP code.",
-        args_schema=GetZipDetailsInput
+        args_schema={
+            "type": "object",
+            "properties": {
+                "zipcode": {"type": ["string", "integer"], "description": "The ZIP code to get details for"}
+            },
+            "required": ["zipcode"]
+        }
     )
 ]
 
