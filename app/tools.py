@@ -134,12 +134,11 @@ def get_zip_details(zipcode: Union[str, int]) -> str:
 
 # Create tool versions of the functions for the agent
 list_cities_tool = tool(list_cities)
-query_zip_scores_tool = tool(query_zip_scores)
 get_geojson_for_city_tool = tool(get_geojson_for_city)
 get_zip_details_tool = tool(get_zip_details)
 
 # Expose both the regular functions and the tool versions
 __all__ = [
     'list_cities', 'query_zip_scores', 'get_zip_details', 'get_geojson_for_city',
-    'list_cities_tool', 'query_zip_scores_tool', 'get_zip_details_tool', 'get_geojson_for_city_tool'
+    'list_cities_tool', 'get_zip_details_tool', 'get_geojson_for_city_tool'
 ] 
