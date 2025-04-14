@@ -36,7 +36,7 @@ def get_cities():
     Endpoint to get list of available cities.
     """
     try:
-        cities = list_cities.invoke("")  # Empty input since no parameters needed
+        cities = list_cities()  # Call function directly
         return jsonify({"cities": cities}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -50,7 +50,7 @@ def get_zip_scores():
     """
     try:
         city = request.args.get('city', '')
-        result = query_zip_scores(city)  # Direct function call instead of invoke
+        result = query_zip_scores(city)  # Call function directly
         return jsonify({"result": result}), 200
     except Exception as e:
         print(f"Error in /zip-scores: {str(e)}")  # Add logging
@@ -62,7 +62,7 @@ def get_zip_details_endpoint(zipcode):
     Endpoint to get detailed information for a specific ZIP code.
     """
     try:
-        result = get_zip_details.invoke({"zipcode": zipcode})
+        result = get_zip_details(zipcode)  # Call function directly
         return jsonify({"result": result}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
