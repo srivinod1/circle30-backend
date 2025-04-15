@@ -4,19 +4,19 @@ from langchain.agents import AgentExecutor, create_openai_functions_agent
 from langchain.tools import StructuredTool
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from pydantic.v1 import BaseModel, Field
-from .tools import query_zip_scores, get_zip_details
+from .tools import query_zip_scores_tool, get_zip_details_tool
 
 # Load the OpenAI API key from the environment variable
 openai_api_key = os.getenv('OPENAI_API_KEY')
 
 # Initialize the OpenAI LLM
 llm = ChatOpenAI(
-    model="gpt-3.5-turbo-16k",
-    temperature=0,
+    model="gpt-4o",
+    temperature=0.4,
     api_key=openai_api_key
 )
 
-# Define Pydantic models for tool schemas
+# Define Pydantic v1 models for tool schemas
 class QueryZipScoresInput(BaseModel):
     city: str = Field(description="The name of the city")
 
@@ -26,13 +26,13 @@ class GetZipDetailsInput(BaseModel):
 # Define the tools
 tools = [
     StructuredTool.from_function(
-        func=query_zip_scores,
+        func=lambda city: query_zip_scores_tool.invoke({"city": city}),
         name="query_zip_scores",
         description="Get ZIP codes for a given city.",
         args_schema=QueryZipScoresInput
     ),
     StructuredTool.from_function(
-        func=get_zip_details,
+        func=lambda zipcode: get_zip_details_tool.invoke({"zipcode": zipcode}),
         name="get_zip_details",
         description="Get detailed statistics for a specific ZIP code.",
         args_schema=GetZipDetailsInput
@@ -87,8 +87,7 @@ def test_agent(query: str):
     try:
         response = agent_executor.invoke({
             "input": query,
-            "chat_history": [],
-            "agent_scratchpad": []
+            "chat_history": []
         })
         return response["output"]
     except Exception as e:
